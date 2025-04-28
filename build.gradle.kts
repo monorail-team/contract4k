@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm") version "2.0.20"
 }
 
-group = "linkpay"
+group = "contract4k"
 version = "1.0-SNAPSHOT"
 
 repositories {

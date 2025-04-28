@@ -3,3 +3,7 @@ plugins {
 }
 rootProject.name = "contract4k"
 
+include(
+    ":contract-core",
+)
+
