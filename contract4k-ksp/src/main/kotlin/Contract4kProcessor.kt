@@ -1,5 +1,3 @@
-package contract4k.ksp
-
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.*
 import java.io.OutputStreamWriter

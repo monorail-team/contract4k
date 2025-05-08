@@ -1,14 +1,14 @@
 plugins {
-    kotlin("jvm") version "2.0.21"
+    kotlin("jvm")
 }
 
 group = "com.github.monorail-team"
 version = "0.0.1"
 
-repositories {
-    mavenCentral()
-}
-
 kotlin {
     jvmToolchain(21)
+}
+
+dependencies {
+    implementation(kotlin("stdlib"))
 }
