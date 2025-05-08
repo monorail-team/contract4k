@@ -17,6 +17,8 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+
+    // contract4k
     implementation("com.github.monorail-team:contract-lib:1.0-SNAPSHOT")
     implementation("org.aspectj:aspectjrt:1.9.21")
     aspect("com.github.monorail-team:contract-lib:1.0-SNAPSHOT")
