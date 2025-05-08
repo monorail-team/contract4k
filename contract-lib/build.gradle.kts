@@ -15,7 +15,6 @@ dependencies {
 
     // aspectj
     implementation("org.aspectj:aspectjrt:1.9.21")
-    implementation("org.aspectj:aspectjweaver:1.9.21")
 }
 
 tasks.test {
@@ -25,11 +24,3 @@ tasks.test {
 kotlin {
     jvmToolchain(21)
 }
-
-//tasks.withType<JavaCompile> {
-//    options.compilerArgs += listOf(
-//        "-aspectpath", sourceSets.main.get().output.asPath,
-//        "-classpath", classpath.asPath,
-//        "-d", outputDir
-//    )
-//}
