@@ -25,3 +25,5 @@ kotlin {
 
 group = "com.github.monorail-team"
 version = "1.0.0"
+
+sourceSets["main"].resources.srcDir("src/main/resources")
