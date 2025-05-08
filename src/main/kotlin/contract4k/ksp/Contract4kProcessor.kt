@@ -65,7 +65,17 @@ class Contract4kProcessor(
             it.declaration.qualifiedName?.asString()
         }
 
-        return base + contracts
+        val parameterImports = functions.flatMap { function ->
+            function.parameters.mapNotNull {
+                it.type.resolve().declaration.qualifiedName?.asString()
+            }
+        }
+
+        val returnTypeImports = functions.mapNotNull {
+            it.returnType?.resolve()?.declaration?.qualifiedName?.asString()
+        }
+
+        return base + contracts + parameterImports + returnTypeImports
     }
 
     private fun generateAspectMethod(
