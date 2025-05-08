@@ -1,22 +1,32 @@
-package contract4k.contract
+package contract4k.contract;
 
 import contract4k.condition.ConditionBuilder
 
-interface Contract4kDsl<I, O> {
+interface Contract4KDsl<I, O> {
     fun validatePre(input: I)
     fun validatePost(input: I, result: O)
 }
 
-inline fun preConditions(block: ConditionBuilder.() -> Unit) {
+inline fun <I> Contract4KDsl<I, *>.preConditions(
+    block: ConditionBuilder.() -> Unit
+) {
     val builder = ConditionBuilder()
-    ConditionBuilder.current = builder
     builder.block()
     builder.checkAll()
 }
 
-inline fun postConditions(block: ConditionBuilder.() -> Unit) {
+inline fun <I> Contract4KDsl<I, *>.postConditions(
+    block: ConditionBuilder.() -> Unit
+) {
     val builder = ConditionBuilder()
-    ConditionBuilder.current = builder
+    builder.block()
+    builder.checkAll()
+}
+
+inline fun <I> Contract4KDsl<I, *>.invariants(
+    block: ConditionBuilder.() -> Unit
+) {
+    val builder = ConditionBuilder()
     builder.block()
     builder.checkAll()
 }
