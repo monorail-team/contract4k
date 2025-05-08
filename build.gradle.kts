@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.0.20"
+    kotlin("jvm") version "2.0.21"
     id("com.google.devtools.ksp") version "2.0.21-1.0.27"
 }
 
@@ -27,3 +27,7 @@ group = "com.github.monorail-team"
 version = "1.0.0"
 
 sourceSets["main"].resources.srcDir("src/main/resources")
+
+tasks.withType<Copy>().configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
