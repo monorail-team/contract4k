@@ -2,6 +2,7 @@ package contract4k.aspect
 
 import contract4k.annotation.Contract4kWith
 import contract4k.contract.Contract4kDsl
+import contract4k.contract.and
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
@@ -20,7 +21,10 @@ class Contract4kAspect {
         val input = joinPoint.args.let {
             when (it.size) {
                 1 -> it[0]
-                2 -> it[0] to it[1]
+                2 -> it[0] and it[1]
+                3 -> it[0] and it[1] and it[2]
+                4 -> it[0] and it[1] and it[2] and it[3]
+                5 -> it[0] and it[1] and it[2] and it[3] and it[4]
                 else -> it.toList()
             }
         }
