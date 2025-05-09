@@ -1,4 +1,4 @@
-package contract4k.contract;
+package contract;
 
 data class Fourth<out A, out B, out C, out D>(
     val first: A,

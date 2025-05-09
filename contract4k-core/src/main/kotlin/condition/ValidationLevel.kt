@@ -1,3 +1,3 @@
-package contract4k.condition
+package condition
 
 enum class ValidationLevel { ERROR, WARNING }

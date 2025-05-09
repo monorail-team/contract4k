@@ -1,6 +1,6 @@
-package contract4k.contract
+package contract
 
-import contract4k.condition.ConditionBuilder
+import condition.ConditionBuilder
 
 interface Contract4kDsl<I, O> {
     fun validatePre(input: I)

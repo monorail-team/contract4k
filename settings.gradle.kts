@@ -1,8 +1,7 @@
 pluginManagement {
     repositories {
-        google()
-        gradlePluginPortal()
         mavenCentral()
+        gradlePluginPortal()
     }
     plugins {
         id("com.gradle.plugin-publish") version "1.2.1"
@@ -14,7 +13,6 @@ plugins {
 
 dependencyResolutionManagement {
     repositories {
-        google()
         mavenCentral()
     }
 }
@@ -23,6 +21,6 @@ rootProject.name = "contract4k"
 
 include(
     "contract4k-core",
-    "contract4k-ksp",
+    "contract4k-doc",
     "contract4k-gradle-plugin"
 )

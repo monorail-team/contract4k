@@ -1,8 +1,9 @@
 plugins {
     kotlin("jvm")
+    id("io.freefair.aspectj.post-compile-weaving") version "8.4"
 }
 
-group = "com.github.monorail-team"
+group = "io.github.monorail_team.contract4k"
 version = "0.0.1"
 
 kotlin {
@@ -11,4 +12,5 @@ kotlin {
 
 dependencies {
     implementation(kotlin("stdlib"))
+    implementation("org.aspectj:aspectjrt:1.9.21")
 }

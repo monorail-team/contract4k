@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm") version "2.0.21"
 }
 
-group = "com.github.monorail-team"
+group = "io.github.monorail_team.contract4k"
 version = "0.0.1"
 
 repositories {

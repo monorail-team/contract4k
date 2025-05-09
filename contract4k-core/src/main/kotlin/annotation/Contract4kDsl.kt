@@ -1,4 +1,4 @@
-package contract4k.annotation
+package annotation
 
 @DslMarker
 annotation class Contract4kDsl

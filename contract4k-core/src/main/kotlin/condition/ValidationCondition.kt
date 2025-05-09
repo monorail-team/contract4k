@@ -1,4 +1,4 @@
-package contract4k.condition
+package condition
 
 data class ValidationCondition(
     val code: String,

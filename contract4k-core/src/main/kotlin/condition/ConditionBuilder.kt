@@ -1,6 +1,6 @@
-package contract4k.condition
+package condition
 
-import contract4k.annotation.Contract4kDsl
+import annotation.Contract4kDsl
 
 @Contract4kDsl
 class ConditionBuilder {

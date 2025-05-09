@@ -1,6 +1,6 @@
-package contract4k.annotation
+package annotation
 
-import contract4k.contract.Contract4kDsl
+import contract.Contract4kDsl
 import kotlin.reflect.KClass
 
 @Target(AnnotationTarget.FUNCTION)

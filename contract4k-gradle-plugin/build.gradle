@@ -1,10 +1,12 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     id 'java-gradle-plugin'
     id 'org.jetbrains.kotlin.jvm'
     id 'com.gradle.plugin-publish' version '1.2.1'
 }
 
-group = 'io.github.brokenfinger98.contract4k'
+group = 'io.github.monorail_team.contract4k'
 version = '0.0.1'
 
 repositories {
@@ -20,18 +22,20 @@ dependencies {
     implementation localGroovy()
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-    kotlinOptions.jvmTarget = "21"
+tasks.withType(KotlinCompile).configureEach {
+    kotlinOptions {
+        jvmTarget = "21"
+    }
 }
 
 gradlePlugin {
     plugins {
         contract4k {
-            id = 'io.github.brokenfinger98.contract4k'
-            implementationClass = 'Contract4kPlugin'
-            displayName = 'Contract4k Gradle Plugin'
-            description = 'A Kotlin DSL plugin for Design by Contract validation with KSP and AspectJ support.'
-            tags.set(['kotlin', 'dsl', 'contract', 'validation', 'aspectj'])
+            id = "io.github.monorail_team.contract4k"
+            implementationClass = "Contract4kPlugin"
+            displayName = "Contract4k Gradle Plugin"
+            description = "A Kotlin DSL plugin for Design by Contract validation with AspectJ support."
+            tags.set(["kotlin", "dsl", "contract", "validation", "aspectj"])
             website.set("https://github.com/monorail-team/contract4k")
             vcsUrl.set("https://github.com/monorail-team/contract4k")
         }
