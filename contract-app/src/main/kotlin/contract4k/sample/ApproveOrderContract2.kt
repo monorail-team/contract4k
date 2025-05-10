@@ -4,7 +4,7 @@ import contract4k.contract.Contract4kDsl
 import contract4k.contract.preConditions
 import contract4k.contract.postConditions
 
-object ApproveOrderContract : Contract4kDsl<Pair<Order, Customer>, Order> {
+class ApproveOrderContract2 : Contract4kDsl<Pair<Order, Customer>, Order> {
 
     override fun validatePre(input: Pair<Order, Customer>) = preConditions {
         println("pre")

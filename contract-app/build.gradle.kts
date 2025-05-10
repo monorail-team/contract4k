@@ -21,6 +21,9 @@ dependencies {
     // contract4k
     implementation("org.aspectj:aspectjrt:1.9.21")
     aspect("com.github.monorail-team:contract-lib:1.0-SNAPSHOT")
+
+    // reflecction
+    implementation(kotlin("reflect"))
 }
 
 tasks.test {

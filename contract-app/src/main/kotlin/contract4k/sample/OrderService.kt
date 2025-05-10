@@ -11,4 +11,12 @@ class OrderService {
         println("✅ 주문 승인 완료!")
         return order
     }
+
+    @Contract4kWith(ApproveOrderContract2::class)
+    fun approveOrder2(order: Order, customer: Customer): Order {
+        println("💼 주문 승인 중...")
+        order.status = "APPROVED"
+        println("✅ 주문 승인 완료!")
+        return order
+    }
 }
