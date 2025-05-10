@@ -1,4 +1,4 @@
-package contract4k.condition.util
+package condition.util
 
 import kotlin.text.Regex
 
