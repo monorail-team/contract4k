@@ -1,6 +1,8 @@
 package condition
 
 import annotation.Contract4kDsl
+import exception.ErrorCode
+import exception.ValidationException
 
 @Contract4kDsl
 class ConditionBuilder {
