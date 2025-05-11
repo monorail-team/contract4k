@@ -1,7 +1,7 @@
 package aspect
 
 import annotation.Contract4kWith
-import contract.Contract4kDsl
+import contract.Contract4KDsl
 import contract.Contract4kRegistry
 import contract.and
 import org.aspectj.lang.ProceedingJoinPoint
@@ -17,7 +17,7 @@ class Contract4kAspect {
     fun around(joinPoint: ProceedingJoinPoint): Any? {
         val method = (joinPoint.signature as MethodSignature).method
         val annotation = method.getAnnotation(Contract4kWith::class.java)
-        val contractClass = annotation.value as KClass<out Contract4kDsl<Any?, Any?>>
+        val contractClass = annotation.value as KClass<out Contract4KDsl<Any?, Any?>>
         val contract = contractClass.objectInstance ?: Contract4kRegistry.getOrCreate(contractClass)
 
         val input = joinPoint.args.let {
