@@ -1,4 +1,4 @@
-package condition
+package condition.util
 
 import java.time.LocalDate
 
@@ -70,8 +70,8 @@ fun <T> notEmpty(items: Iterable<T>?): Boolean =
  * 문자열이 비어있지 않은지 Boolean을 반환
  * 호출: notEmpty(str)
  */
-fun notEmpty(str: String?): Boolean =
-    str != null && str.isNotBlank()
+fun notBlank(str: String?): Boolean =
+    !str.isNullOrBlank()
 
 /**
  * 컬렉션에 중복 요소가 없는지 Boolean 을 반환

@@ -22,5 +22,6 @@ rootProject.name = "contract4k"
 include(
     "contract4k-core",
     "contract4k-doc",
-    "contract4k-gradle-plugin"
+    "contract4k-gradle-plugin",
+    "contract4k-sample"
 )
