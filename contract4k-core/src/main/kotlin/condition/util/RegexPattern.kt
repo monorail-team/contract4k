@@ -21,9 +21,3 @@ object Patterns {
     /**날짜 (YYYY-MM-DD) */
     val DATE = Regex("^\\d{4}-\\d{2}-\\d{2}\$")
 }
-
-val EMAIL:    Regex get() = Patterns.EMAIL
-val URL:      Regex get() = Patterns.URL
-val UUID:     Regex get() = Patterns.UUID
-val PHONE:    Regex get() = Patterns.PHONE
-val DATE:     Regex get() = Patterns.DATE

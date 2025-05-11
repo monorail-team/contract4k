@@ -1,10 +1,10 @@
 package annotation
 
-import contract.Contract4kDsl
+import contract.Contract4KDsl
 import kotlin.reflect.KClass
 
 @Target(AnnotationTarget.FUNCTION)
-@Retention(AnnotationRetention.SOURCE)
+@Retention(AnnotationRetention.RUNTIME)
 annotation class Contract4kWith(
-    val value: KClass<out Contract4kDsl<*, *>>
+    val value: KClass<out Contract4KDsl<*, *>>
 )
