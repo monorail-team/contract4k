@@ -4,10 +4,6 @@ import annotation.Contract4kDsl
 
 @Contract4kDsl
 class ConditionBuilder {
-    companion object {
-        @PublishedApi
-        internal lateinit var current: ConditionBuilder
-    }
 
     private val conditions = mutableListOf<ValidationCondition>()
 
@@ -30,8 +26,24 @@ class ConditionBuilder {
         }
 
         if (failedWarnings.isNotEmpty()) {
-            println("⚠️ Warning(s):")
+            println("Warning:")
             failedWarnings.forEach { println("- [${it.code}] ${it.message}") }
+        }
+    }
+
+    fun checkAllSoft(): Result<Unit> {
+        val failedErrors = mutableListOf<ErrorCode>()
+
+        for ((code, message, quickFix, level, predicate) in conditions) {
+            if (!predicate() && level == ValidationLevel.ERROR) {
+                failedErrors += ErrorCode(code, message, quickFix)
+            }
+        }
+
+        return if (failedErrors.isEmpty()) {
+            Result.success(Unit)
+        } else {
+            Result.failure(ValidationException(failedErrors))
         }
     }
 
@@ -43,9 +55,8 @@ class ConditionBuilder {
         )
     }
 
-
     infix fun String.mustBe(predicate: () -> Boolean) {
-        current.requireThat(
+        requireThat(
             code = generateCodeFromMessage(this),
             message = this,
             level = ValidationLevel.ERROR,
@@ -54,7 +65,7 @@ class ConditionBuilder {
     }
 
     infix fun String.mayBe(predicate: () -> Boolean) {
-        current.requireThat(
+        requireThat(
             code = generateCodeFromMessage(this),
             message = this,
             level = ValidationLevel.WARNING,
@@ -66,8 +77,13 @@ class ConditionBuilder {
         return QuickFixHolder(this, fixMessage)
     }
 
+    class QuickFixHolder(
+        val message: String,
+        val fix: String
+    )
+
     infix fun QuickFixHolder.means(predicate: () -> Boolean) {
-        current.requireThat(
+        requireThat(
             code = generateCodeFromMessage(this.message),
             message = this.message,
             quickFix = this.fix,
@@ -98,9 +114,4 @@ class ConditionBuilder {
             .uppercase()
             .replace(Regex("[^A-Z0-9]+"), "_")
     }
-
-    class QuickFixHolder(
-        val message: String,
-        val fix: String
-    )
 }
