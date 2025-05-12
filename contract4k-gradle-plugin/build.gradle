@@ -4,10 +4,11 @@ plugins {
     id 'java-gradle-plugin'
     id 'org.jetbrains.kotlin.jvm'
     id 'com.gradle.plugin-publish' version '1.2.1'
+    id 'maven-publish'
 }
 
-group = 'io.github.monorail_team.contract4k'
-version = '0.0.1'
+group = "com.github.monorail-team"
+version = rootProject.version.toString()
 
 repositories {
     mavenCentral()
@@ -31,7 +32,7 @@ tasks.withType(KotlinCompile).configureEach {
 gradlePlugin {
     plugins {
         contract4k {
-            id = "io.github.monorail_team.contract4k"
+            id = "io.github.monorail-team.contract4k"
             implementationClass = "Contract4kPlugin"
             displayName = "Contract4k Gradle Plugin"
             description = "A Kotlin DSL plugin for Design by Contract validation with AspectJ support."
