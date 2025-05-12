@@ -33,6 +33,7 @@ class Contract4kAspect {
 
         contract.validatePre(input)
         val result = joinPoint.proceed()
+        contract.validateInvariant(input, result)
         contract.validatePost(input, result)
 
         return result
