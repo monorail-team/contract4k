@@ -48,6 +48,11 @@ object uniqueElements
 /** 컬렉션에 null 요소가 없는 상태를 나타내는 마커. */
 object allElementsNotNull
 
+/**
+ * 객체에 null 상태를 나타내는 마커
+ */
+object nil
+
 // -------- Collection/Iterable 유틸---------
 /**
  * 컬렉션(Iterable)에 특정 요소가 포함되어 있는지 확인합니다.
@@ -385,6 +390,24 @@ infix fun Temporal.isAfter(other: Temporal): Boolean {
 infix fun Temporal.isNotAfter(other: Temporal): Boolean = !this.isAfter(other)
 
 //--------- 일반 객체 유팅 -----------
+
+/**
+ * 모든 타입의 객체(Any?)가 null이 아닌지 확인합니다.
+ * @receiver 확인할 객체.
+ * @param marker 'nil' 마커 객체.
+ * @return 객체가 null이 아니면 true, null이면 false.
+ * 사용: `myObject isNot nil`
+ */
+infix fun Any?.isNot(marker: nil): Boolean = this != null
+
+/**
+ * 모든 타입의 객체(Any?)가 null인지 확인합니다.
+ * @receiver 확인할 객체.
+ * @param marker 'nil' 마커 객체.
+ * @return 객체가 null이면 true, null이 아니면 false.
+ * 사용: `myObject is nil`
+ */
+infix fun Any?.`is`(marker: nil): Boolean = this == null
 
 /**
  * 객체가 특정 클래스의 인스턴스인지 확인합니다.
