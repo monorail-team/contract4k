@@ -4,27 +4,27 @@ import condition.applyGroup
 import condition.util.*
 import contract.Contract4KDsl
 import contract.conditions
-import contract.softConditions
 
 object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
 
     override fun validateInvariant(input: Pair<Order, Customer>, output: Order) {
         val (order, customer) = input
         conditions {
-            "주문은 null이 될 수 없습니다" means { order != null }
-            "소비자는 null이 될 수 없습니다" means { customer != null }
+            "주문은 null이 될 수 없습니다" means { order isNot  nil }
+            "소비자는 null이 될 수 없습니다" means { customer isNot nil }
+
         }
     }
 
     override fun validatePre(input: Pair<Order, Customer>) {
         val (order, customer) = input
-        softConditions {
+        conditions {
             "주문 가격은 1..10000 사이여야 합니다" means { order.amount between (1..10_000) }
-            "상품 목록은 비어있으면 안 됩니다" means { notEmpty(order.items) }
-            "상품 목록 크기는 1..5 사이여야 합니다" means { order.items sizeBetween (1..5) }
-            "상품 목록에 중복이 없어야 합니다" means { hasNoDuplicates(order.items) }
+            "상품 목록은 비어있으면 안 됩니다" means { order.items isNot  empty}
+            "상품 목록 크기는 1..5 사이여야 합니다" means { order.items hasCountInRange (1..5) }
+            "상품 목록에 중복이 없어야 합니다" means { order.items are distinctElements}
             "상품 목록에 A, B가 모두 포함되어야 합니다" means { order.items hasAll listOf("A", "B") }
-            "상품 목록에 C가 없어야 합니다" means { !(order.items has "C") }
+            "상품 목록에 C가 없어야 합니다" means { order.items doesNotHave  "C" }
 
             applyGroup(customer, CommonCustomerConditions)
 

@@ -18,7 +18,7 @@ fun main() {
     val badCustomer = Customer(name = "", id = 2, email = "")
     try {
         ApproveOrderContract.validatePre(Pair(badOrder, badCustomer))
-        println("✅ (잘못된) Precondition 통과 – 예상밖")
+        println("✅ (잘못된) Precondition 통과 – 예상밖 1")
     } catch (e: Exception) {
         println("❌ (잘못된) Precondition 실패 – 정상 동작: ${e.message}")
     }
