@@ -45,6 +45,9 @@ object inTheFuture
 /** 컬렉션의 요소들이 모두 고유한(중복 없는) 상태를 나타내는 마커. */
 object uniqueElements
 
+/** 컬렉션에 중복된 요소가 있는 상태를 나타내는 마커. */
+object containingDuplicates
+
 /** 컬렉션에 null 요소가 없는 상태를 나타내는 마커. */
 object allElementsNotNull
 
@@ -593,20 +596,30 @@ infix fun <T> Collection<T?>?.`is`(marker: allElementsNotNull): Boolean = this.a
 infix fun <T> Collection<T?>?.areNot(marker: allElementsNotNull): Boolean = !(this == null || this.all { it != null })
 infix fun <T> Collection<T?>?.isNot(marker: allElementsNotNull): Boolean = this.areNot(marker)
 
-// 좀 더 명시적인 부정 표현을 위한 추가 함수
+// ConditionUtils.kt 내, 다른 is/are 함수들과 함께 추가
 /**
  * 컬렉션에 중복된 요소가 있는지 확인합니다.
  * @receiver 대상 컬렉션
- * 사용: `idList containsDuplicates`
+ * @param marker 'containingDuplicates' 마커 객체
+ * @return 중복된 요소가 있으면 true, 없거나 컬렉션이 null이면 false.
+ * 사용: `duplicatedList are containingDuplicates`
  */
-fun <T> Collection<T>?.containsDuplicates(): Boolean = this != null && this.size != this.toSet().size
+infix fun <T> Collection<T>?.are(marker: containingDuplicates): Boolean =
+    this != null && this.size != this.toSet().size
+
+infix fun <T> Collection<T>?.`is`(marker: containingDuplicates): Boolean = this.are(marker)
 
 /**
- * 컬렉션에 null인 요소가 하나라도 있는지 확인합니다.
- * @receiver 대상 컬렉션 (nullable 요소 포함 가능)
- * 사용: `values containsSomeNulls`
+ * 컬렉션에 중복된 요소가 없는지 확인합니다. (즉, 모든 요소가 고유한지)
+ * @receiver 대상 컬렉션
+ * @param marker 'containingDuplicates' 마커 객체
+ * @return 중복된 요소가 없거나 컬렉션이 null이면 true. (이것은 'are uniqueElements'와 동일)
+ * 사용: `uniqueList areNot containingDuplicates`
  */
-fun <T> Collection<T?>?.containsSomeNulls(): Boolean = this != null && this.any { it == null }
+infix fun <T> Collection<T>?.areNot(marker: containingDuplicates): Boolean =
+    !(this != null && this.size != this.toSet().size)
+
+infix fun <T> Collection<T>?.isNot(marker: containingDuplicates): Boolean = this.areNot(marker)
 
 // -------- 날짜 시간 마커 체크 ----------
 
