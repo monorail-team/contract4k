@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm")
     id("io.freefair.aspectj.post-compile-weaving") version "8.4"
+    id("maven-publish")
 }
 
 group = "io.github.monorail_team.contract4k"

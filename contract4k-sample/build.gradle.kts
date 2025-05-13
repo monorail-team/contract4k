@@ -11,4 +11,8 @@ kotlin {
 
 dependencies {
     implementation(project(":contract4k-core"))
+    implementation(project(":contract4k-gradle-plugin"))
+    implementation(kotlin("stdlib"))
+    implementation(gradleApi())
+    implementation(localGroovy())
 }
