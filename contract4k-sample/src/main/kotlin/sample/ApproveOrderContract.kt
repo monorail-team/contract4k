@@ -19,7 +19,11 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
     override fun validatePre(input: Pair<Order, Customer>) {
         val (order, customer) = input
         softConditions {
-            "주문 가격은 1..10000 사이여야 합니다" means { order.amount between (1..10_000) }
+            "주문 가격은 1..10000 사이여야 합니다" means {
+                order.amount between (1..10_000)
+                notEmpty(order.items)
+                order.items sizeBetween (1..5)
+            }
             "상품 목록은 비어있으면 안 됩니다" means { notEmpty(order.items) }
             "상품 목록 크기는 1..5 사이여야 합니다" means { order.items sizeBetween (1..5) }
             "상품 목록에 중복이 없어야 합니다" means { hasNoDuplicates(order.items) }
@@ -28,8 +32,18 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
 
             applyGroup(customer, CommonCustomerConditions)
 
-//            "고객 이름에 'A'가 포함되어야 합니다" means { customer.name hasSub "A" }
-//            "이메일 형식이어야 합니다" means { customer.email matchesForm EMAIL }
+        }
+
+        conditions {
+            "고객 연락처 유효성: 이메일 또는 전화번호 중 하나는 유효해야 합니다" meansAnyOf {
+                "이메일 형식 검사" meansNested { customer.email matchesForm  Patterns.EMAIL }
+                "고객 이름 비어있지 않음" meansNested { customer.name.isNotBlank()}
+            }
+
+            "특별 주문 조건" quickFix "아이템 X 추가 또는 금액 증가" meansAnyOf {
+                "아이템 X 포함 여부" meansNested { order.items has "X" }
+                "주문 총액 조건" meansNested { order.amount >= 50000 }
+            }
         }
     }
 

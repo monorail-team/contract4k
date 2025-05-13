@@ -5,6 +5,18 @@ import exception.ErrorCode
 import exception.ValidationException
 
 @Contract4kDsl
+class SubConditionCollector {
+    internal val conditionResults = mutableListOf<Boolean>()
+    infix fun String.meansNested(predicate: () -> Boolean) {
+        conditionResults.add(predicate())
+    }
+
+    infix fun ConditionBuilder.QuickFixHolder.meansNested(predicate: () -> Boolean) {
+        conditionResults.add(predicate())
+    }
+}
+
+@Contract4kDsl
 class ConditionBuilder {
 
     private val conditions = mutableListOf<ValidationCondition>()
@@ -94,6 +106,80 @@ class ConditionBuilder {
         )
     }
 
+    infix fun String.meansAnyOf(block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector()
+        collector.block()
+        val overallCondition = {
+            if (collector.conditionResults.isEmpty()) {
+                false
+            } else {
+                collector.conditionResults.any { it }
+            }
+        }
+
+        requireThat(
+            code = generateCodeFromMessage(this),
+            message = this,
+            level = ValidationLevel.ERROR,
+            condition = overallCondition
+        )
+    }
+
+    infix fun QuickFixHolder.meansAnyOf(block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector()
+        collector.block()
+
+        val overallCondition = {
+            if (collector.conditionResults.isEmpty()) false
+            else collector.conditionResults.any { it }
+        }
+
+        this@ConditionBuilder.requireThat( // 명시적으로 ConditionBuilder의 requireThat 호출
+            code = generateCodeFromMessage(this.message),
+            message = this.message,
+            quickFix = this.fix,
+            level = ValidationLevel.ERROR,
+            condition = overallCondition
+        )
+    }
+
+    infix fun String.meansAllOf(block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector()
+        collector.block()
+
+        val overallCondition = {
+            if (collector.conditionResults.isEmpty()) {
+                true
+            } else {
+                collector.conditionResults.all { it }
+            }
+        }
+
+        requireThat(
+            code = generateCodeFromMessage(this),
+            message = this,
+            level = ValidationLevel.ERROR,
+            condition = overallCondition
+        )
+    }
+
+    infix fun QuickFixHolder.meansAllOf(block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector()
+        collector.block()
+
+        val overallCondition = {
+            if (collector.conditionResults.isEmpty()) true
+            else collector.conditionResults.all { it }
+        }
+
+        this@ConditionBuilder.requireThat(
+            code = generateCodeFromMessage(this.message),
+            message = this.message,
+            quickFix = this.fix,
+            level = ValidationLevel.ERROR,
+            condition = overallCondition
+        )
+    }
     private fun requireThat(
         code: String,
         message: String,
@@ -115,5 +201,6 @@ class ConditionBuilder {
             .trim()
             .uppercase()
             .replace(Regex("[^A-Z0-9]+"), "_")
+            .replace(Regex("_$"), "")
     }
 }
