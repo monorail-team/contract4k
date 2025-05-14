@@ -4,229 +4,276 @@ import annotation.Contract4kDsl
 import exception.ErrorCode
 import exception.ValidationException
 
-/**
- * 계약 조건을 구성하고 검증하는 빌더 클래스입니다.
- * DSL을 통해 사전 조건, 사후 조건, 불변식 등을 정의할 수 있습니다.
- *
- * 사용 예시 (Contract4KDsl 인터페이스를 구현하는 클래스 내부):
- * ```kotlin
- * conditions {
- * "메시지 1" means { /* 조건 람다 1 */ }
- * ("메시지 3" quickFix "빠른 수정 제안") means { /* 조건 람다 3 */ }
- * }
- * ```
- */
+@Contract4kDsl
+class SubConditionCollector {
+    internal val subPredicates = mutableListOf<Triple<String, () -> Boolean, String?>>()
+
+    infix fun String.meansNested(predicate: () -> Boolean) {
+        subPredicates.add(Triple(this, predicate, null))
+    }
+
+    infix fun ConditionBuilder.QuickFixHolder.meansNested(predicate: () -> Boolean) {
+        this@SubConditionCollector.subPredicates.add(Triple(this.message, predicate, this.fix))
+    }
+}
+
 @Contract4kDsl
 class ConditionBuilder {
 
     private val conditions = mutableListOf<ValidationCondition>()
 
-    /**
-     * 등록된 모든 조건을 검증합니다.
-     * ERROR 레벨의 조건 중 하나라도 실패하면 ValidationException을 발생시킵니다.
-     * WARNING 레벨의 조건이 실패하면 콘솔에 경고 메시지를 출력합니다.
-     */
+    // 1. checkAll 및 checkAllSoft 수정: ValidationException에 List<ValidationCondition> 전달
     fun checkAll() {
-        val failedErrors = mutableListOf<ErrorCode>()
-        val failedWarnings = mutableListOf<ErrorCode>()
+        val failedVCs = mutableListOf<ValidationCondition>()
+        val warningVCs = mutableListOf<ValidationCondition>() // 경고도 ValidationCondition으로 수집
 
-        for ((code, message, quickFix, level, predicate) in conditions) {
-            if (!predicate()) {
-                val error = ErrorCode(code, message, quickFix)
-                when (level) {
-                    ValidationLevel.ERROR -> failedErrors += error
-                    ValidationLevel.WARNING -> failedWarnings += error
+        for (vc in conditions) {
+            if (!vc.predicate()) { // 전체 조건(그룹 포함) 실패 시
+                when (vc.level) {
+                    ValidationLevel.ERROR -> failedVCs.add(vc)
+                    ValidationLevel.WARNING -> warningVCs.add(vc)
                 }
             }
         }
 
-        if (failedErrors.isNotEmpty()) {
-            throw ValidationException(failedErrors)
+        if (failedVCs.isNotEmpty()) {
+            throw ValidationException(failedVCs) // ValidationCondition 리스트 전달
         }
 
-        if (failedWarnings.isNotEmpty()) {
-            println("Warning:")
-            failedWarnings.forEach { println("- [${it.code}] ${it.message}") }
-        }
-    }
-
-    /**
-     * 등록된 ERROR 레벨 조건들만 검증하여 Result 객체를 반환합니다.
-     * ValidationException을 직접 발생시키지 않고, 성공 또는 실패 결과를 반환합니다.
-     * @return 조건 검증 성공 시 Result.success(Unit), 실패 시 Result.failure(ValidationException)
-     */
-    fun checkAllSoft(): Result<Unit> {
-        val failedErrors = mutableListOf<ErrorCode>()
-
-        for ((code, message, quickFix, level, predicate) in conditions) {
-            if (!predicate() && level == ValidationLevel.ERROR) {
-                failedErrors += ErrorCode(code, message, quickFix)
+        if (warningVCs.isNotEmpty()) {
+            println("Warning:") // 이 부분도 ValidationReporter를 사용하도록 확장 가능
+            warningVCs.forEach { vc ->
+                // 간단히 상위 메시지만 출력하거나, ValidationException처럼 상세 출력 가능
+                print("- ${vc.message}")
+                if (vc.quickFix != null) {
+                    print(" (빠른 수정: ${vc.quickFix.suggestion})")
+                }
+                println()
+                // 경고에 대한 하위 조건 출력은 선택 사항
             }
         }
+    }
 
-        return if (failedErrors.isEmpty()) {
+    fun checkAllSoft(): Result<Unit> {
+        val failedVCs = conditions.filter { it.level == ValidationLevel.ERROR && !it.predicate() }
+        return if (failedVCs.isEmpty()) {
             Result.success(Unit)
         } else {
-            Result.failure(ValidationException(failedErrors))
+            Result.failure(ValidationException(failedVCs)) // ValidationCondition 리스트 전달
         }
     }
 
-    /**
-     * 주어진 메시지와 조건 람다를 사용하여 계약 조건을 정의합니다. (기본 레벨: ERROR)
-     * "메시지"는 조건이 실패했을 때 사용자에게 보여줄 설명이며, 에러 코드 자동 생성에도 사용됩니다.
-     * 조건 람다는 Boolean을 반환해야 하며, true이면 조건을 만족한 것입니다.
-     *
-     * @param predicate 조건 검증 로직을 담은 람다 함수.
-     * @receiver 조건 실패 시 메시지 및 에러 코드 생성을 위한 문자열.
-     * 사용: `"주문 수량은 0보다 커야 합니다" means { order.quantity > 0 }`
-     */
+    // 2. 일반 조건 정의 함수 (means, mustBe, mayBe)는 addOrUpdateCondition 호출
     infix fun String.means(predicate: () -> Boolean) {
-        requireThat(
+        addOrUpdateCondition(
             code = generateCodeFromMessage(this),
             message = this,
-            condition = predicate
+            predicate = predicate
         )
     }
 
-
-    /**
-     * 주어진 메시지와 조건 람다를 사용하여 ERROR 레벨의 계약 조건을 명시적으로 정의합니다.
-     * `means`와 유사하지만, 이 조건은 항상 ERROR 레벨로 처리됩니다.
-     *
-     * @param predicate 조건 검증 로직을 담은 람다 함수.
-     * @receiver 조건 실패 시 메시지 및 에러 코드 생성을 위한 문자열.
-     * 사용: `"사용자 ID는 null이 아니어야 합니다" mustBe { userId != null }`
-     */
     infix fun String.mustBe(predicate: () -> Boolean) {
-        requireThat(
+        addOrUpdateCondition(
             code = generateCodeFromMessage(this),
             message = this,
-            level = ValidationLevel.ERROR,
-            condition = predicate
+            level = ValidationLevel.ERROR, // mustBe는 항상 ERROR
+            predicate = predicate
         )
     }
 
-    /**
-     * 주어진 메시지와 조건 람다를 사용하여 WARNING 레벨의 계약 조건을 정의합니다.
-     * 이 조건이 실패하더라도 ValidationException은 발생하지 않지만, 경고로 보고됩니다.
-     *
-     * @param predicate 조건 검증 로직을 담은 람다 함수.
-     * @receiver 조건 실패 시 메시지 및 에러 코드 생성을 위한 문자열.
-     * 사용: `"오래된 API 버전 사용 중입니다" mayBe { apiVersion > 2 }`
-     */
     infix fun String.mayBe(predicate: () -> Boolean) {
-        requireThat(
+        addOrUpdateCondition(
             code = generateCodeFromMessage(this),
             message = this,
-            level = ValidationLevel.WARNING,
-            condition = predicate
+            level = ValidationLevel.WARNING, // mayBe는 항상 WARNING
+            predicate = predicate
         )
     }
 
-    /**
-     * 계약 조건 메시지에 대한 빠른 수정 제안(QuickFix)을 연결합니다.
-     * 반환된 `QuickFixHolder` 객체에 `means`, `mustBe`, `mayBe` 등을 사용하여 실제 조건을 연결할 수 있습니다.
-     *
-     * @param fixMessage 조건 실패 시 제공될 빠른 수정 제안 문자열.
-     * @receiver 조건 실패 시 메시지 및 에러 코드 생성을 위한 문자열.
-     * @return 메시지와 빠른 수정 제안을 담고 있는 QuickFixHolder 객체.
-     * 사용: `("잘못된 이메일 형식입니다" quickFix "이메일 주소를 다시 확인해주세요") means { email matchesPattern Patterns.EMAIL }`
-     */
+    // 3. QuickFixHolder를 inner class로 변경 (ConditionBuilder의 멤버 접근 용이)
+    inner class QuickFixHolder(
+        val message: String,
+        val fix: String
+    ) {
+        infix fun means(predicate: () -> Boolean) {
+            this@ConditionBuilder.addOrUpdateCondition(
+                code = generateCodeFromMessage(this.message),
+                message = this.message,
+                quickFix = QuickFix(this.fix),
+                predicate = predicate
+            )
+        }
+
+        // QuickFixHolder에 대한 meansAnyOf
+        infix fun meansAnyOf(block: SubConditionCollector.() -> Unit) {
+            val collector = SubConditionCollector()
+            collector.block() // 블록 실행 (내부에서 "msg".meansNested 또는 QuickFixHolder.meansNested 호출)
+
+            val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
+                SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
+            }
+
+            val overallSuccess: Boolean
+            val relevantSubDetailsForReport: List<SubConditionDetail>
+
+            if (collector.subPredicates.isEmpty()) {
+                overallSuccess = false
+                relevantSubDetailsForReport = emptyList()
+            } else {
+                overallSuccess = evaluatedSubConditions.any { it.success }
+                if (overallSuccess) { // AnyOf 성공 시: 성공에 기여한 조건들만 (요구사항)
+                    relevantSubDetailsForReport = evaluatedSubConditions.filter { it.success }
+                } else { // AnyOf 실패 시: 모든 하위 조건들 (실패 원인 파악용 - 사용자 예시)
+                    relevantSubDetailsForReport = evaluatedSubConditions
+                }
+            }
+
+            this@ConditionBuilder.addOrUpdateCondition(
+                code = generateCodeFromMessage(this.message),
+                message = this.message,
+                quickFix = QuickFix(this.fix),
+                predicate = { overallSuccess },
+                subConditionsDetails = relevantSubDetailsForReport,
+                groupingType = GroupingType.ANY_OF
+            )
+        }
+
+        // QuickFixHolder에 대한 meansAllOf
+        infix fun meansAllOf(block: SubConditionCollector.() -> Unit) {
+            val collector = SubConditionCollector()
+            collector.block()
+
+            val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
+                SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
+            }
+
+            val overallSuccess: Boolean
+            val relevantSubDetailsForReport: List<SubConditionDetail>
+
+            if (collector.subPredicates.isEmpty()) {
+                overallSuccess = true
+                relevantSubDetailsForReport = emptyList()
+            } else {
+                overallSuccess = evaluatedSubConditions.all { it.success }
+                if (!overallSuccess) { // AllOf 실패 시: 실패에 기여한 조건들만 (요구사항)
+                    relevantSubDetailsForReport = evaluatedSubConditions.filter { !it.success }
+                } else { // AllOf 성공 시: (선택) 모든 하위 조건 (모두 성공) 또는 빈 리스트
+                    relevantSubDetailsForReport = emptyList() // 성공 시에는 하위 상세 불필요 (요구사항에 따름)
+                    // 또는 evaluatedSubConditions (모든 성공한 하위 조건)
+                }
+            }
+
+            this@ConditionBuilder.addOrUpdateCondition(
+                code = generateCodeFromMessage(this.message),
+                message = this.message,
+                quickFix = QuickFix(this.fix),
+                predicate = { overallSuccess },
+                subConditionsDetails = relevantSubDetailsForReport,
+                groupingType = GroupingType.ALL_OF
+            )
+        }
+    }
+    // String.quickFix는 QuickFixHolder(inner class) 인스턴스 반환
     infix fun String.quickFix(fixMessage: String): QuickFixHolder {
         return QuickFixHolder(this, fixMessage)
     }
 
-    /**
-     * 메시지와 빠른 수정 제안(QuickFix)을 함께 가지고 있는 홀더 클래스입니다.
-     * 이 클래스의 인스턴스에 `means` 조건 정의 함수를 체이닝할 수 있습니다.
-     */
-    class QuickFixHolder(
-        val message: String,
-        val fix: String
-    )
 
-    /**
-     * QuickFixHolder에 ERROR 레벨의 계약 조건을 명시적으로 연결합니다.
-     *
-     * @param predicate 조건 검증 로직을 담은 람다 함수.
-     * @receiver 메시지와 QuickFix 정보를 담고 있는 QuickFixHolder 인스턴스.
-     */
-    infix fun QuickFixHolder.mustBe(predicate: () -> Boolean) {
-        requireThat(
-            code = generateCodeFromMessage(this.message),
-            message = this.message,
-            quickFix = this.fix,
-            level = ValidationLevel.ERROR,
-            condition = predicate
-        )
-    }
-    /**
-     * QuickFixHolder에 실제 계약 조건을 연결합니다. (기본 레벨: ERROR)
-     *
-     * @param predicate 조건 검증 로직을 담은 람다 함수.
-     * @receiver 메시지와 QuickFix 정보를 담고 있는 QuickFixHolder 인스턴스.
-     * 사용: `val check = "메시지" quickFix "제안"; check means { 조건 }`
-     */
-    infix fun QuickFixHolder.means(predicate: () -> Boolean) {
-        requireThat(
-            code = generateCodeFromMessage(this.message),
-            message = this.message,
-            quickFix = this.fix,
-            level = ValidationLevel.ERROR,
-            condition = predicate
-        )
-    }
-    /**
-     * QuickFixHolder에 WARNING 레벨의 계약 조건을 연결합니다.
-     *
-     * @param predicate 조건 검증 로직을 담은 람다 함수.
-     * @receiver 메시지와 QuickFix 정보를 담고 있는 QuickFixHolder 인스턴스.
-     */
-    infix fun QuickFixHolder.mayBe(predicate: () -> Boolean) {
-        requireThat(
-            code = generateCodeFromMessage(this.message),
-            message = this.message,
-            quickFix = this.fix,
-            level = ValidationLevel.WARNING,
-            condition = predicate
+    // 4. meansAnyOf / meansAllOf (String 수신자) 수정
+    infix fun String.meansAnyOf(block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector()
+        collector.block()
+
+        val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
+            SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
+        }
+
+        val overallSuccess: Boolean
+        val relevantSubDetailsForReport: List<SubConditionDetail>
+
+        if (collector.subPredicates.isEmpty()) {
+            overallSuccess = false
+            relevantSubDetailsForReport = emptyList()
+        } else {
+            overallSuccess = evaluatedSubConditions.any { it.success }
+            if (overallSuccess) { // AnyOf 성공 시: 성공에 기여한 조건들
+                relevantSubDetailsForReport = evaluatedSubConditions.filter { it.success }
+            } else { // AnyOf 실패 시: 모든 하위 조건들
+                relevantSubDetailsForReport = evaluatedSubConditions
+            }
+        }
+
+        addOrUpdateCondition(
+            code = generateCodeFromMessage(this),
+            message = this,
+            predicate = { overallSuccess },
+            subConditionsDetails = relevantSubDetailsForReport,
+            groupingType = GroupingType.ANY_OF
         )
     }
 
-    /**
-     * 내부적으로 사용되는 함수로, 모든 조건 정의는 이 함수를 통해 ValidationCondition 객체로 변환되어 리스트에 추가됩니다.
-     * @param code 에러 코드 (메시지로부터 자동 생성됨).
-     * @param message 조건 실패 시 사용자에게 보여줄 메시지.
-     * @param quickFix 빠른 수정 제안 (optional).
-     * @param level 검증 레벨 (ERROR 또는 WARNING).
-     * @param condition 실제 조건 검증 로직을 담은 람다 함수.
-     */
-    private fun requireThat(
+    infix fun String.meansAllOf(block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector()
+        collector.block()
+
+        val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
+            SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
+        }
+
+        val overallSuccess: Boolean
+        val relevantSubDetailsForReport: List<SubConditionDetail>
+
+        if (collector.subPredicates.isEmpty()) {
+            overallSuccess = true
+            relevantSubDetailsForReport = emptyList()
+        } else {
+            overallSuccess = evaluatedSubConditions.all { it.success }
+            if (!overallSuccess) { // AllOf 실패 시: 실패에 기여한 조건들
+                relevantSubDetailsForReport = evaluatedSubConditions.filter { !it.success }
+            } else { // AllOf 성공 시
+                relevantSubDetailsForReport = emptyList() // 성공 시 하위 상세 불필요
+            }
+        }
+
+        addOrUpdateCondition(
+            code = generateCodeFromMessage(this),
+            message = this,
+            predicate = { overallSuccess },
+            subConditionsDetails = relevantSubDetailsForReport,
+            groupingType = GroupingType.ALL_OF
+        )
+    }
+
+    // 5. requireThat 대신 addOrUpdateCondition 사용 (ValidationCondition 구조 변경 반영)
+    private fun addOrUpdateCondition(
         code: String,
         message: String,
-        quickFix: String? = null,
         level: ValidationLevel = ValidationLevel.ERROR,
-        condition: () -> Boolean
+        quickFix: QuickFix? = null,
+        predicate: () -> Boolean,
+        subConditionsDetails: List<SubConditionDetail>? = null,
+        groupingType: GroupingType = GroupingType.NONE
     ) {
         conditions += ValidationCondition(
-            code = code,
+            code = code, // 코드는 여전히 생성 (필요 없다면 제거 가능)
             message = message,
-            quickFix = quickFix?.let { QuickFix(it) },
+            predicate = predicate,
             level = level,
-            predicate = condition
+            quickFix = quickFix,
+            subConditionsDetails = subConditionsDetails,
+            groupingType = groupingType
         )
     }
 
-    /**
-     * 메시지 문자열로부터 에러 코드를 생성합니다.
-     * 메시지를 대문자로 변환하고, 비 영숫자 문자를 밑줄(_)로 대체합니다.
-     * 예: "Order amount must be positive!" -> "ORDER_AMOUNT_MUST_BE_POSITIVE_"
-     * @param message 에러 코드를 생성할 기반 메시지 문자열.
-     * @return 생성된 에러 코드 문자열.
-     */
+    // 6. generateCodeFromMessage (코드 부분 제거 원하면 수정 또는 사용 안 함)
     private fun generateCodeFromMessage(message: String): String {
+        // 코드 부분이 출력에 필요 없다면, 여기서 빈 문자열을 반환하거나 아예 사용하지 않을 수 있음.
+        // 또는, 유니크 ID 생성 등으로 대체 가능.
+        // 현재는 메시지 기반 코드 생성 유지.
         return message
             .trim()
             .uppercase()
-            .replace(Regex("[^A-Z0-9]+"), "_")
+            .replace(Regex("[^A-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣]+"), "_")
+            .replace(Regex("_$"), "")
     }
 }
