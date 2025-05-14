@@ -11,24 +11,20 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
     override fun validateInvariant(input: Pair<Order, Customer>, output: Order) {
         val (order, customer) = input
         conditions {
-            "주문은 null이 될 수 없습니다" means { order != null }
-            "소비자는 null이 될 수 없습니다" means { customer != null }
+            "주문은 null이 될 수 없습니다" means { order isNot nil }
+            "소비자는 null이 될 수 없습니다" means { customer isNot nil }
         }
     }
 
     override fun validatePre(input: Pair<Order, Customer>) {
         val (order, customer) = input
         softConditions {
-            "주문 가격은 1..10000 사이여야 합니다" means {
-                order.amount between (1..10_000)
-                notEmpty(order.items)
-                order.items sizeBetween (1..5)
-            }
-            "상품 목록은 비어있으면 안 됩니다" means { notEmpty(order.items) }
-            "상품 목록 크기는 1..5 사이여야 합니다" means { order.items sizeBetween (1..5) }
-            "상품 목록에 중복이 없어야 합니다" means { hasNoDuplicates(order.items) }
+            "주문 가격은 1..10000 사이여야 합니다" means { order.amount between (1..10_000) }
+            "상품 목록은 비어있으면 안 됩니다" means { order.items isNot  empty}
+            "상품 목록 크기는 1..5 사이여야 합니다" means { order.items hasCountInRange (1..5) }
+            "상품 목록에 중복이 없어야 합니다" means { order.items are distinctElements}
             "상품 목록에 A, B가 모두 포함되어야 합니다" means { order.items hasAll listOf("A", "B") }
-            "상품 목록에 C가 없어야 합니다" means { !(order.items has "C") }
+            "상품 목록에 C가 없어야 합니다" means { order.items doesNotHave  "C" }
 
             applyGroup(customer, CommonCustomerConditions)
 
@@ -36,11 +32,11 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
 
         conditions {
             "고객 연락처 유효성: 이메일 또는 전화번호 중 하나는 유효해야 합니다" meansAnyOf {
-                "이메일 형식 검사" meansNested { customer.email matchesForm  Patterns.EMAIL }
+                "이메일 형식 검사" meansNested { customer.email matchesPattern  Patterns.EMAIL }
                 "고객 이름 비어있지 않음" meansNested { customer.name.isNotBlank()}
             }
 
-            "특별 주문 조건" quickFix "아이템 X 추가 또는 금액 증가" meansAnyOf {
+            "특별 주문 조건" quickFix "아이템 X 추가 또는 금액 증가" meansAnyOf  {
                 "아이템 X 포함 여부" meansNested { order.items has "X" }
                 "주문 총액 조건" meansNested { order.amount >= 50000 }
             }

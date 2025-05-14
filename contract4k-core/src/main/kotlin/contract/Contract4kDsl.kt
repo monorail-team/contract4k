@@ -1,6 +1,8 @@
-package contract;
+package contract
 
 import condition.ConditionBuilder
+import condition.ValidationCondition // 추가
+import exception.ErrorCode           // 추가
 import exception.ValidationException
 import report.ConsoleValidationReporter
 import report.ValidationReporter
@@ -19,7 +21,7 @@ inline fun conditions(
 ) {
     val builder = ConditionBuilder()
     builder.block()
-    builder.checkAll()
+    builder.checkAll() // 내부에서 ValidationException(List<ValidationCondition>) 발생
 }
 
 inline fun softConditions(
@@ -29,10 +31,14 @@ inline fun softConditions(
     val builder = ConditionBuilder()
     builder.block()
     val result = builder.checkAllSoft()
-
     if (result.isFailure) {
         val exception = result.exceptionOrNull() as? ValidationException
-        exception?.failures?.let { reporter.report(it) }
+        exception?.let { ex ->
+            val errorCodesForReporter = ex.failedRootConditions.map { vc ->
+                ErrorCode(vc.code, vc.message, vc.quickFix)
+            }
+            reporter.report(errorCodesForReporter)
+        }
     }
 
     return result
