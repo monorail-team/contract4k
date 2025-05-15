@@ -21,6 +21,20 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
         softConditions {
             means(code = "testError", message = "테스트", predicate = { order `is` nil })
 
+            quickFix(
+                code = "널코드",
+                message = "주문이 비어있으면 안됨",
+                fixMessage = "주문 넣어라"
+            ) means { order `is` nil}
+
+            meansAnyOf(
+                code = "OPTION_A_OR_B_RECOMMENDED",
+                message = "선택 사항 A 또는 B를 포함하는 것이 좋습니다",
+            ) {
+                "A 포함됨" meansNested { order.items has "c" }
+                "B 포함됨" meansNested { order.items has "b" }
+            }
+
             "주문 가격은 1..10000 사이여야 합니다" means { order.amount between (1..10_000) }
             "상품 목록은 비어있으면 안 됩니다" means { order.items isNot  empty}
             "상품 목록 크기는 1..5 사이여야 합니다" means { order.items hasCountInRange (1..5) }
@@ -33,12 +47,12 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
         }
 
         conditions {
-            "고객 연락처 유효성: 이메일 또는 전화번호 중 하나는 유효해야 합니다" meansAnyOf {
+            "고객 연락처 유효성: 이메일 또는 전화번호 중 하나는 유효해야 합니다" meansAllOf {
                 "이메일 형식 검사" meansNested { customer.email matchesPattern  Patterns.EMAIL }
                 "고객 이름 비어있지 않음" meansNested { customer.name.isNotBlank()}
             }
 
-            "특별 주문 조건" quickFix "아이템 X 추가 또는 금액 증가" meansAnyOf  {
+            "특별 주문 조건" quickFix "아이템 X 추가 또는 금액 증가" meansAnyOf {
                 "아이템 X 포함 여부" meansNested { order.items has "X" }
                 "주문 총액 조건" meansNested { order.amount >= 50000 }
             }
