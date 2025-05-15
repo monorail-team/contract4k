@@ -1,11 +1,10 @@
 package contract
 
 import condition.ConditionBuilder
-import condition.ValidationCondition // 추가
-import exception.ErrorCode           // 추가
+import exception.ErrorCode
 import exception.ValidationException
-import report.ConsoleValidationReporter
 import report.ValidationReporter
+import config.Contract4kConfig
 
 interface Contract4KDsl<I, O> {
 
@@ -21,11 +20,11 @@ inline fun conditions(
 ) {
     val builder = ConditionBuilder()
     builder.block()
-    builder.checkAll() // 내부에서 ValidationException(List<ValidationCondition>) 발생
+    builder.checkAll()
 }
 
 inline fun softConditions(
-    reporter: ValidationReporter = ConsoleValidationReporter,
+    reporter: ValidationReporter = Contract4kConfig.defaultSortConditionRepoter,
     block: ConditionBuilder.() -> Unit
 ): Result<Unit> {
     val builder = ConditionBuilder()
@@ -35,7 +34,7 @@ inline fun softConditions(
         val exception = result.exceptionOrNull() as? ValidationException
         exception?.let { ex ->
             val errorCodesForReporter = ex.failedRootConditions.map { vc ->
-                ErrorCode(vc.code, vc.message, vc.quickFix)
+                ErrorCode(vc.code, vc.message, vc.quickFix,vc.isCodeExplicitlySet)
             }
             reporter.report(errorCodesForReporter)
         }

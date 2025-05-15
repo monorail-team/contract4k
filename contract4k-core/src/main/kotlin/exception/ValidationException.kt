@@ -1,8 +1,8 @@
-package exception // 또는 실제 패키지 (condition 패키지에서 exception 패키지로 이동했다면)
+package exception
 
-import condition.ValidationCondition // 실제 경로
+import condition.ValidationCondition
 import condition.GroupingType
-import condition.SubConditionDetail
+
 
 class ValidationException(
     val failedRootConditions: List<ValidationCondition>
@@ -22,7 +22,8 @@ class ValidationException(
         builder.append(header)
 
         failedRootConditions.forEach { vc ->
-            builder.append("- ${vc.message}")
+            val codePrefix = if (vc.isCodeExplicitlySet) "[${vc.code}] " else ""
+            builder.append("- ${codePrefix}${vc.message}")
             if (vc.quickFix != null) {
                 builder.append(" (빠른 수정: ${vc.quickFix.suggestion})")
             }
