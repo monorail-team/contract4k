@@ -11,8 +11,8 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
     override fun validateInvariant(input: Pair<Order, Customer>, output: Order) {
         val (order, customer) = input
         conditions {
-            "주문은 null이 될 수 없습니다" means { order isNot nil }
-            "소비자는 null이 될 수 없습니다" means { customer isNot nil }
+            "주문은 빈 값이 될 수 없습니다" means { order isNot nil }
+            "소비자는 빈 값이 될 수 없습니다" means { customer isNot nil }
         }
     }
 

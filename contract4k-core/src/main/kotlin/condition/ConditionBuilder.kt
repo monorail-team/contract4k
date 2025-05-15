@@ -253,9 +253,9 @@ class ConditionBuilder {
 
 
     private fun addOrUpdateCondition(
-        code: String?, // Nullable로 변경
+        code: String?,
         message: String,
-        level: ValidationLevel = ValidationLevel.ERROR, // 기본값을 ERROR로 설정
+        level: ValidationLevel = ValidationLevel.ERROR,
         quickFix: QuickFix? = null,
         isCodeExplicitlySet: Boolean,
         predicate: () -> Boolean,
@@ -263,7 +263,7 @@ class ConditionBuilder {
         groupingType: GroupingType = GroupingType.NONE
     ) {
         conditions += ValidationCondition(
-            code = code.takeIf { it?.isNotBlank() == true }, // 빈 문자열 code는 null로 처리
+            code = code.takeIf { it?.isNotBlank() == true },
             message = message,
             predicate = predicate,
             level = level,
