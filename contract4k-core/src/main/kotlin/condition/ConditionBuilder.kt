@@ -22,13 +22,13 @@ class ConditionBuilder {
 
     private val conditions = mutableListOf<ValidationCondition>()
 
-    // 1. checkAll 및 checkAllSoft 수정: ValidationException에 List<ValidationCondition> 전달
+
     fun checkAll() {
         val failedVCs = mutableListOf<ValidationCondition>()
-        val warningVCs = mutableListOf<ValidationCondition>() // 경고도 ValidationCondition으로 수집
+        val warningVCs = mutableListOf<ValidationCondition>()
 
         for (vc in conditions) {
-            if (!vc.predicate()) { // 전체 조건(그룹 포함) 실패 시
+            if (!vc.predicate()) {
                 when (vc.level) {
                     ValidationLevel.ERROR -> failedVCs.add(vc)
                     ValidationLevel.WARNING -> warningVCs.add(vc)
@@ -37,19 +37,17 @@ class ConditionBuilder {
         }
 
         if (failedVCs.isNotEmpty()) {
-            throw ValidationException(failedVCs) // ValidationCondition 리스트 전달
+            throw ValidationException(failedVCs)
         }
 
         if (warningVCs.isNotEmpty()) {
-            println("Warning:") // 이 부분도 ValidationReporter를 사용하도록 확장 가능
+            println("Warning:")
             warningVCs.forEach { vc ->
-                // 간단히 상위 메시지만 출력하거나, ValidationException처럼 상세 출력 가능
                 print("- ${vc.message}")
                 if (vc.quickFix != null) {
                     print(" (빠른 수정: ${vc.quickFix.suggestion})")
                 }
                 println()
-                // 경고에 대한 하위 조건 출력은 선택 사항
             }
         }
     }
@@ -59,11 +57,11 @@ class ConditionBuilder {
         return if (failedVCs.isEmpty()) {
             Result.success(Unit)
         } else {
-            Result.failure(ValidationException(failedVCs)) // ValidationCondition 리스트 전달
+            Result.failure(ValidationException(failedVCs))
         }
     }
 
-    // 2. 일반 조건 정의 함수 (means, mustBe, mayBe)는 addOrUpdateCondition 호출
+
     infix fun String.means(predicate: () -> Boolean) {
         addOrUpdateCondition(
             code = generateCodeFromMessage(this),
@@ -90,7 +88,6 @@ class ConditionBuilder {
         )
     }
 
-    // 3. QuickFixHolder를 inner class로 변경 (ConditionBuilder의 멤버 접근 용이)
     inner class QuickFixHolder(
         val message: String,
         val fix: String
@@ -104,10 +101,10 @@ class ConditionBuilder {
             )
         }
 
-        // QuickFixHolder에 대한 meansAnyOf
+
         infix fun meansAnyOf(block: SubConditionCollector.() -> Unit) {
             val collector = SubConditionCollector()
-            collector.block() // 블록 실행 (내부에서 "msg".meansNested 또는 QuickFixHolder.meansNested 호출)
+            collector.block()
 
             val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
                 SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
@@ -121,9 +118,9 @@ class ConditionBuilder {
                 relevantSubDetailsForReport = emptyList()
             } else {
                 overallSuccess = evaluatedSubConditions.any { it.success }
-                if (overallSuccess) { // AnyOf 성공 시: 성공에 기여한 조건들만 (요구사항)
+                if (overallSuccess) {
                     relevantSubDetailsForReport = evaluatedSubConditions.filter { it.success }
-                } else { // AnyOf 실패 시: 모든 하위 조건들 (실패 원인 파악용 - 사용자 예시)
+                } else {
                     relevantSubDetailsForReport = evaluatedSubConditions
                 }
             }
@@ -138,7 +135,7 @@ class ConditionBuilder {
             )
         }
 
-        // QuickFixHolder에 대한 meansAllOf
+
         infix fun meansAllOf(block: SubConditionCollector.() -> Unit) {
             val collector = SubConditionCollector()
             collector.block()
@@ -155,11 +152,11 @@ class ConditionBuilder {
                 relevantSubDetailsForReport = emptyList()
             } else {
                 overallSuccess = evaluatedSubConditions.all { it.success }
-                if (!overallSuccess) { // AllOf 실패 시: 실패에 기여한 조건들만 (요구사항)
+                if (!overallSuccess) {
                     relevantSubDetailsForReport = evaluatedSubConditions.filter { !it.success }
-                } else { // AllOf 성공 시: (선택) 모든 하위 조건 (모두 성공) 또는 빈 리스트
-                    relevantSubDetailsForReport = emptyList() // 성공 시에는 하위 상세 불필요 (요구사항에 따름)
-                    // 또는 evaluatedSubConditions (모든 성공한 하위 조건)
+                } else {
+                    relevantSubDetailsForReport = emptyList()
+
                 }
             }
 
@@ -173,13 +170,13 @@ class ConditionBuilder {
             )
         }
     }
-    // String.quickFix는 QuickFixHolder(inner class) 인스턴스 반환
+
     infix fun String.quickFix(fixMessage: String): QuickFixHolder {
         return QuickFixHolder(this, fixMessage)
     }
 
 
-    // 4. meansAnyOf / meansAllOf (String 수신자) 수정
+
     infix fun String.meansAnyOf(block: SubConditionCollector.() -> Unit) {
         val collector = SubConditionCollector()
         collector.block()
@@ -196,9 +193,9 @@ class ConditionBuilder {
             relevantSubDetailsForReport = emptyList()
         } else {
             overallSuccess = evaluatedSubConditions.any { it.success }
-            if (overallSuccess) { // AnyOf 성공 시: 성공에 기여한 조건들
+            if (overallSuccess) {
                 relevantSubDetailsForReport = evaluatedSubConditions.filter { it.success }
-            } else { // AnyOf 실패 시: 모든 하위 조건들
+            } else {
                 relevantSubDetailsForReport = evaluatedSubConditions
             }
         }
@@ -228,10 +225,10 @@ class ConditionBuilder {
             relevantSubDetailsForReport = emptyList()
         } else {
             overallSuccess = evaluatedSubConditions.all { it.success }
-            if (!overallSuccess) { // AllOf 실패 시: 실패에 기여한 조건들
+            if (!overallSuccess) {
                 relevantSubDetailsForReport = evaluatedSubConditions.filter { !it.success }
-            } else { // AllOf 성공 시
-                relevantSubDetailsForReport = emptyList() // 성공 시 하위 상세 불필요
+            } else {
+                relevantSubDetailsForReport = emptyList()
             }
         }
 
@@ -244,7 +241,6 @@ class ConditionBuilder {
         )
     }
 
-    // 5. requireThat 대신 addOrUpdateCondition 사용 (ValidationCondition 구조 변경 반영)
     private fun addOrUpdateCondition(
         code: String,
         message: String,
@@ -255,7 +251,7 @@ class ConditionBuilder {
         groupingType: GroupingType = GroupingType.NONE
     ) {
         conditions += ValidationCondition(
-            code = code, // 코드는 여전히 생성 (필요 없다면 제거 가능)
+            code = code,
             message = message,
             predicate = predicate,
             level = level,
@@ -265,11 +261,8 @@ class ConditionBuilder {
         )
     }
 
-    // 6. generateCodeFromMessage (코드 부분 제거 원하면 수정 또는 사용 안 함)
+
     private fun generateCodeFromMessage(message: String): String {
-        // 코드 부분이 출력에 필요 없다면, 여기서 빈 문자열을 반환하거나 아예 사용하지 않을 수 있음.
-        // 또는, 유니크 ID 생성 등으로 대체 가능.
-        // 현재는 메시지 기반 코드 생성 유지.
         return message
             .trim()
             .uppercase()

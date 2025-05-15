@@ -21,7 +21,7 @@ inline fun conditions(
 ) {
     val builder = ConditionBuilder()
     builder.block()
-    builder.checkAll() // 내부에서 ValidationException(List<ValidationCondition>) 발생
+    builder.checkAll()
 }
 
 inline fun softConditions(
