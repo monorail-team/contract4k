@@ -1,11 +1,10 @@
 package contract
 
 import condition.ConditionBuilder
-import condition.ValidationCondition // 추가
-import exception.ErrorCode           // 추가
+import exception.ErrorCode
 import exception.ValidationException
-import report.ConsoleValidationReporter
 import report.ValidationReporter
+import config.Contract4kConfig
 
 interface Contract4KDsl<I, O> {
 
@@ -25,7 +24,7 @@ inline fun conditions(
 }
 
 inline fun softConditions(
-    reporter: ValidationReporter = ConsoleValidationReporter,
+    reporter: ValidationReporter = Contract4kConfig.defaultSortConditionRepoter,
     block: ConditionBuilder.() -> Unit
 ): Result<Unit> {
     val builder = ConditionBuilder()
