@@ -1,7 +1,6 @@
 package condition
 
 import annotation.Contract4kDsl
-import exception.ErrorCode
 import exception.ValidationException
 
 @Contract4kDsl
@@ -20,253 +19,259 @@ class SubConditionCollector {
 @Contract4kDsl
 class ConditionBuilder {
 
-    private val conditions = mutableListOf<ValidationCondition>()
-
+    internal val conditions = mutableListOf<ValidationCondition>()
 
     fun checkAll() {
-        val failedVCs = mutableListOf<ValidationCondition>()
-        val warningVCs = mutableListOf<ValidationCondition>()
-
-        for (vc in conditions) {
-            if (!vc.predicate()) {
-                when (vc.level) {
-                    ValidationLevel.ERROR -> failedVCs.add(vc)
-                    ValidationLevel.WARNING -> warningVCs.add(vc)
-                }
-            }
+        val failedErrorVCs = conditions.filter {
+            it.level == ValidationLevel.ERROR && !it.predicate()
         }
 
-        if (failedVCs.isNotEmpty()) {
-            throw ValidationException(failedVCs)
-        }
-
-        if (warningVCs.isNotEmpty()) {
-            println("Warning:")
-            warningVCs.forEach { vc ->
-                print("- ${vc.message}")
-                if (vc.quickFix != null) {
-                    print(" (빠른 수정: ${vc.quickFix.suggestion})")
-                }
-                println()
-            }
+        if (failedErrorVCs.isNotEmpty()) {
+            throw ValidationException(failedErrorVCs)
         }
     }
 
     fun checkAllSoft(): Result<Unit> {
-        val failedVCs = conditions.filter { it.level == ValidationLevel.ERROR && !it.predicate() }
-        return if (failedVCs.isEmpty()) {
+        val failedErrorVCs = conditions.filter { it.level == ValidationLevel.ERROR && !it.predicate() }
+        return if (failedErrorVCs.isEmpty()) {
             Result.success(Unit)
         } else {
-            Result.failure(ValidationException(failedVCs))
+            Result.failure(ValidationException(failedErrorVCs))
         }
     }
 
 
     infix fun String.means(predicate: () -> Boolean) {
         addOrUpdateCondition(
-            code = generateCodeFromMessage(this),
+            code = null,
             message = this,
+            level = ValidationLevel.ERROR,
+            isCodeExplicitlySet = false,
             predicate = predicate
         )
     }
 
-    infix fun String.mustBe(predicate: () -> Boolean) {
+    fun means(code: String, message: String, predicate: () -> Boolean) {
         addOrUpdateCondition(
-            code = generateCodeFromMessage(this),
-            message = this,
-            level = ValidationLevel.ERROR, // mustBe는 항상 ERROR
-            predicate = predicate
-        )
-    }
-
-    infix fun String.mayBe(predicate: () -> Boolean) {
-        addOrUpdateCondition(
-            code = generateCodeFromMessage(this),
-            message = this,
-            level = ValidationLevel.WARNING, // mayBe는 항상 WARNING
+            code = code,
+            message = message,
+            level = ValidationLevel.ERROR,
+            isCodeExplicitlySet = true,
             predicate = predicate
         )
     }
 
     inner class QuickFixHolder(
         val message: String,
-        val fix: String
+        val fix: String,
+        val explicitCode: String? = null,
+        val isCodeExplicitlySetForCode: Boolean = false
     ) {
         infix fun means(predicate: () -> Boolean) {
             this@ConditionBuilder.addOrUpdateCondition(
-                code = generateCodeFromMessage(this.message),
+                code = this.explicitCode,
                 message = this.message,
+                level = ValidationLevel.ERROR,
                 quickFix = QuickFix(this.fix),
-                predicate = predicate
+                predicate = predicate,
+                isCodeExplicitlySet = this.isCodeExplicitlySetForCode
             )
         }
-
 
         infix fun meansAnyOf(block: SubConditionCollector.() -> Unit) {
-            val collector = SubConditionCollector()
-            collector.block()
-
-            val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
-                SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
-            }
-
-            val overallSuccess: Boolean
-            val relevantSubDetailsForReport: List<SubConditionDetail>
-
-            if (collector.subPredicates.isEmpty()) {
-                overallSuccess = false
-                relevantSubDetailsForReport = emptyList()
-            } else {
-                overallSuccess = evaluatedSubConditions.any { it.success }
-                if (overallSuccess) {
-                    relevantSubDetailsForReport = evaluatedSubConditions.filter { it.success }
-                } else {
-                    relevantSubDetailsForReport = evaluatedSubConditions
-                }
-            }
-
+            val collector = SubConditionCollector().apply(block)
+            val (overallSuccess, reportDetails) = evaluateGroupCondition(collector.subPredicates, GroupingType.ANY_OF)
             this@ConditionBuilder.addOrUpdateCondition(
-                code = generateCodeFromMessage(this.message),
+                code = this.explicitCode,
                 message = this.message,
+                level = ValidationLevel.ERROR,
                 quickFix = QuickFix(this.fix),
                 predicate = { overallSuccess },
-                subConditionsDetails = relevantSubDetailsForReport,
-                groupingType = GroupingType.ANY_OF
+                subConditionsDetails = reportDetails,
+                groupingType = GroupingType.ANY_OF,
+                isCodeExplicitlySet = this.isCodeExplicitlySetForCode
             )
         }
 
-
         infix fun meansAllOf(block: SubConditionCollector.() -> Unit) {
-            val collector = SubConditionCollector()
-            collector.block()
-
-            val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
-                SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
-            }
-
-            val overallSuccess: Boolean
-            val relevantSubDetailsForReport: List<SubConditionDetail>
-
-            if (collector.subPredicates.isEmpty()) {
-                overallSuccess = true
-                relevantSubDetailsForReport = emptyList()
-            } else {
-                overallSuccess = evaluatedSubConditions.all { it.success }
-                if (!overallSuccess) {
-                    relevantSubDetailsForReport = evaluatedSubConditions.filter { !it.success }
-                } else {
-                    relevantSubDetailsForReport = emptyList()
-
-                }
-            }
-
+            val collector = SubConditionCollector().apply(block)
+            val (overallSuccess, reportDetails) = evaluateGroupCondition(collector.subPredicates, GroupingType.ALL_OF)
             this@ConditionBuilder.addOrUpdateCondition(
-                code = generateCodeFromMessage(this.message),
+                code = this.explicitCode, // 이전 코드에서 generateCodeFromMessage 사용 부분 수정
                 message = this.message,
+                level = ValidationLevel.ERROR,
                 quickFix = QuickFix(this.fix),
                 predicate = { overallSuccess },
-                subConditionsDetails = relevantSubDetailsForReport,
-                groupingType = GroupingType.ALL_OF
+                subConditionsDetails = reportDetails,
+                groupingType = GroupingType.ALL_OF,
+                isCodeExplicitlySet = this.isCodeExplicitlySetForCode
             )
         }
     }
 
     infix fun String.quickFix(fixMessage: String): QuickFixHolder {
-        return QuickFixHolder(this, fixMessage)
+        return QuickFixHolder(
+            message = this,
+            fix = fixMessage,
+            explicitCode = null,
+            isCodeExplicitlySetForCode = false
+        )
+    }
+
+    fun quickFix(code: String, message: String, fixMessage: String): QuickFixHolder {
+        return QuickFixHolder(
+            message = message,
+            fix = fixMessage,
+            explicitCode = code,
+            isCodeExplicitlySetForCode = true
+        )
     }
 
 
-
     infix fun String.meansAnyOf(block: SubConditionCollector.() -> Unit) {
-        val collector = SubConditionCollector()
-        collector.block()
+        val collector = SubConditionCollector().apply(block)
 
         val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
             SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
         }
-
         val overallSuccess: Boolean
         val relevantSubDetailsForReport: List<SubConditionDetail>
-
         if (collector.subPredicates.isEmpty()) {
             overallSuccess = false
             relevantSubDetailsForReport = emptyList()
         } else {
             overallSuccess = evaluatedSubConditions.any { it.success }
-            if (overallSuccess) {
-                relevantSubDetailsForReport = evaluatedSubConditions.filter { it.success }
+            relevantSubDetailsForReport = if (overallSuccess) {
+                evaluatedSubConditions.filter { it.success }
             } else {
-                relevantSubDetailsForReport = evaluatedSubConditions
+                evaluatedSubConditions
             }
         }
 
         addOrUpdateCondition(
-            code = generateCodeFromMessage(this),
+            code = null,
             message = this,
+            level = ValidationLevel.ERROR,
+            isCodeExplicitlySet = false,
             predicate = { overallSuccess },
             subConditionsDetails = relevantSubDetailsForReport,
             groupingType = GroupingType.ANY_OF
         )
     }
 
-    infix fun String.meansAllOf(block: SubConditionCollector.() -> Unit) {
-        val collector = SubConditionCollector()
-        collector.block()
+    fun meansAnyOf(code: String, message: String, block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector().apply(block)
+        val (overallSuccess, reportDetails) = evaluateGroupCondition(collector.subPredicates, GroupingType.ANY_OF)
+        addOrUpdateCondition(
+            code = code,
+            message = message,
+            level = ValidationLevel.ERROR,
+            isCodeExplicitlySet = true,
+            predicate = { overallSuccess },
+            subConditionsDetails = reportDetails,
+            groupingType = GroupingType.ANY_OF
+        )
+    }
 
+    infix fun String.meansAllOf(block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector().apply(block)
         val evaluatedSubConditions = collector.subPredicates.map { (msg, pred, qfMsg) ->
             SubConditionDetail(msg, pred(), qfMsg?.let { QuickFix(it) })
         }
-
         val overallSuccess: Boolean
         val relevantSubDetailsForReport: List<SubConditionDetail>
-
         if (collector.subPredicates.isEmpty()) {
-            overallSuccess = true
+            overallSuccess = true // ALL_OF는 비어있으면 true
             relevantSubDetailsForReport = emptyList()
         } else {
             overallSuccess = evaluatedSubConditions.all { it.success }
-            if (!overallSuccess) {
-                relevantSubDetailsForReport = evaluatedSubConditions.filter { !it.success }
+            relevantSubDetailsForReport = if (!overallSuccess) {
+                evaluatedSubConditions.filter { !it.success }
             } else {
-                relevantSubDetailsForReport = emptyList()
+                emptyList()
             }
         }
 
         addOrUpdateCondition(
-            code = generateCodeFromMessage(this),
+            code = null,
             message = this,
+            level = ValidationLevel.ERROR,
+            isCodeExplicitlySet = false,
             predicate = { overallSuccess },
             subConditionsDetails = relevantSubDetailsForReport,
             groupingType = GroupingType.ALL_OF
         )
     }
 
+    fun meansAllOf(code: String, message: String, block: SubConditionCollector.() -> Unit) {
+        val collector = SubConditionCollector().apply(block)
+        val (overallSuccess, reportDetails) = evaluateGroupCondition(collector.subPredicates, GroupingType.ALL_OF)
+        addOrUpdateCondition(
+            code = code,
+            message = message,
+            level = ValidationLevel.ERROR,
+            isCodeExplicitlySet = true,
+            predicate = { overallSuccess },
+            subConditionsDetails = reportDetails,
+            groupingType = GroupingType.ALL_OF
+        )
+    }
+
+    private fun evaluateGroupCondition(
+        subPredicates: List<Triple<String, () -> Boolean, String?>>,
+        groupingType: GroupingType
+    ): Pair<Boolean, List<SubConditionDetail>> {
+        if (subPredicates.isEmpty()) {
+            return when (groupingType) {
+                GroupingType.ANY_OF -> false to emptyList()
+                GroupingType.ALL_OF -> true to emptyList()
+                GroupingType.NONE -> true to emptyList()
+            }
+        }
+
+        val evaluatedSubConditions = subPredicates.map { (msg, pred, qfSuggestion) ->
+            SubConditionDetail(msg, pred(), qfSuggestion?.let { QuickFix(it) })
+        }
+
+        val overallSuccess = when (groupingType) {
+            GroupingType.ANY_OF -> evaluatedSubConditions.any { it.success }
+            GroupingType.ALL_OF -> evaluatedSubConditions.all { it.success }
+            GroupingType.NONE -> true
+        }
+
+        val relevantSubDetailsForReport: List<SubConditionDetail> = when {
+            overallSuccess && groupingType == GroupingType.ANY_OF ->
+                evaluatedSubConditions.filter { it.success }
+            !overallSuccess && groupingType == GroupingType.ANY_OF ->
+                evaluatedSubConditions
+            !overallSuccess && groupingType == GroupingType.ALL_OF ->
+                evaluatedSubConditions.filter { !it.success }
+            else -> emptyList()
+        }
+        return overallSuccess to relevantSubDetailsForReport
+    }
+
+
     private fun addOrUpdateCondition(
-        code: String,
+        code: String?, // Nullable로 변경
         message: String,
-        level: ValidationLevel = ValidationLevel.ERROR,
+        level: ValidationLevel = ValidationLevel.ERROR, // 기본값을 ERROR로 설정
         quickFix: QuickFix? = null,
+        isCodeExplicitlySet: Boolean,
         predicate: () -> Boolean,
         subConditionsDetails: List<SubConditionDetail>? = null,
         groupingType: GroupingType = GroupingType.NONE
     ) {
         conditions += ValidationCondition(
-            code = code,
+            code = code.takeIf { it?.isNotBlank() == true }, // 빈 문자열 code는 null로 처리
             message = message,
             predicate = predicate,
             level = level,
             quickFix = quickFix,
             subConditionsDetails = subConditionsDetails,
-            groupingType = groupingType
+            groupingType = groupingType,
+            isCodeExplicitlySet = isCodeExplicitlySet
         )
     }
 
-
-    private fun generateCodeFromMessage(message: String): String {
-        return message
-            .trim()
-            .uppercase()
-            .replace(Regex("[^A-Z0-9ㄱ-ㅎㅏ-ㅣ가-힣]+"), "_")
-            .replace(Regex("_$"), "")
-    }
 }

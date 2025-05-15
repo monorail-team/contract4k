@@ -15,11 +15,12 @@ enum class GroupingType {
 }
 
 data class ValidationCondition(
-    val code: String,
+    val code: String? = null,
     val message: String,
     val predicate: () -> Boolean,
     val level: ValidationLevel,
     val quickFix: QuickFix?,
     val subConditionsDetails: List<SubConditionDetail>? = null,
-    val groupingType: GroupingType = GroupingType.NONE
+    val groupingType: GroupingType = GroupingType.NONE,
+    val isCodeExplicitlySet: Boolean = false
 )

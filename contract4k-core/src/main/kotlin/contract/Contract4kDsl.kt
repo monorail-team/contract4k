@@ -34,7 +34,7 @@ inline fun softConditions(
         val exception = result.exceptionOrNull() as? ValidationException
         exception?.let { ex ->
             val errorCodesForReporter = ex.failedRootConditions.map { vc ->
-                ErrorCode(vc.code, vc.message, vc.quickFix)
+                ErrorCode(vc.code, vc.message, vc.quickFix,vc.isCodeExplicitlySet)
             }
             reporter.report(errorCodesForReporter)
         }
