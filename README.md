@@ -8,13 +8,11 @@
   - [@Contract4kWith 어노테이션](#contract4kwith-어노테이션)
 - [DSL 사용법](#dsl-사용법)
   - [사전/불변/사후 조건 정의](#사전불변사후-조건-정의)
-  - [조건 표현식 예시](#조건-표현식-예시)
 - [검증 DSL 헬퍼](#검증-DSL-헬퍼)
 - [예외 처리](#예외-처리)
   - [ValidationException](#validationexception)
-  - [ErrorCode 구조](#errorcode-구조)
+  - [ErrorCode](#errorcode)
 - [고급 기능](#고급-기능)
-- [예제](#예제)
 
 ---
 
@@ -144,6 +142,16 @@ interface Contract4KDsl<I, O> {
 }
 ```
 
+### @ContractWith 어노테이션 <a id="contract4kwith-어노테이션"></a>
+
+```
+@Service
+class OrderService {
+  @Contract4kWith(ApproveOrderContract::class)
+  fun placeOrder(...) = …
+}
+```
+
 ---
 
 ## DSL 사용법 <a id="dsl-사용법"></a>
@@ -182,7 +190,7 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
 
 ---
 
-## 조건 빌더 유틸리티 <a id="검증 DSL 헬퍼"></a>
+## 조건 빌더 유틸리티 <a id="검증-DSL-헬퍼"></a>
 
 ConditionBuilder 에서 자주 쓰이는 주요 헬퍼 함수:
 
@@ -240,7 +248,7 @@ ConditionBuilder 에서 자주 쓰이는 주요 헬퍼 함수:
 
 ## 예외 처리 <a id="예외-처리"></a>
 
-- **`ValidationException`**
+- **`ValidationException`** <a id="validationexception"></a>
 
   - 계약(pre/invariant/post) 중 하나라도 실패하면 던져집니다.
   - `RuntimeException` 을 상속하며, 메시지에 어떤 조건이 왜 실패했는지 한눈에 보여 줍니다.
@@ -255,7 +263,7 @@ ConditionBuilder 에서 자주 쓰이는 주요 헬퍼 함수:
     }
     ```
 
-- **ErrorCode**
+- **ErrorCode** <a id="errorcode"></a>
   - 예외 메시지 안에서 `[ERROR_CODE] 메시지` 형태로 표시됩니다.
   - 사용자는 메시지만 보고도 “무슨 조건”이 “왜” 실패했는지 바로 알 수 있습니다.
 
@@ -277,7 +285,7 @@ ConditionBuilder 에서 자주 쓰이는 주요 헬퍼 함수:
   }
   ```
 
-- **meansAnyOf { … }**  
+- **meansAllOf { … }**  
   모든 조건을 동시에 만족해야 하는 그룹화
 
   ```
@@ -297,8 +305,8 @@ ConditionBuilder 에서 자주 쓰이는 주요 헬퍼 함수:
   object CommonCustomerConditions : ConditionGroup<Pair<Order, Customer>> {
     override fun apply(builder: ConditionBuilder, input: Pair<Order, Customer>) {
       val (_, customer) = input
-      builder.requireThat("고객 이름은 비어 있으면 안 됩니다") { customer.name.isNotBlank() }
-      builder.requireThat("고객 나이는 0 초과여야 합니다") { customer.age > 0 }
+      "고객 이름은 비어 있으면 안 됩니다" means { customer.name isNot nil}
+      "고객 나이는 0 초과여야 합니다" means { customer.age > 0 }
     }
   }
 
