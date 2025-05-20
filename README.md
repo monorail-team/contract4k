@@ -168,12 +168,15 @@ object ApproveOrderContract : Contract4KDsl<Pair<Order, Customer>, Order> {
 
   // ① 사전(pre) 조건: 메서드 진입 직전에 실행
   override fun validatePre(input: Pair<Order, Customer>) = conditions {
+    // 방법 1
+    val (order, customer) = input
+    "주문 객체는 null일 수 없습니다" means { order isNot nil }
+    "고객 객체는 null일 수 없습니다" means { customer isNot nil }
+    //방법 2
     "주문 객체는 null일 수 없습니다" means { input.first isNot nil }
     "고객 객체는 null일 수 없습니다" means { input.second isNot nil }
 
-    //val (order, customer) = input
-    //"주문 객체는 null일 수 없습니다" means { order isNot nil }
-    //"고객 객체는 null일 수 없습니다" means { customer isNot nil }
+
   }
 
   // ② 불변(invariant) 조건: 비즈니스 로직 중에도 유지되어야 할 제약
