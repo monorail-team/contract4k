@@ -64,6 +64,7 @@
 ```kotlin
 plugins {
     kotlin("jvm") version "2.0.21"
+    // AspectJ Post-Compile Weaving 플러그인
     id("io.freefair.aspectj.post-compile-weaving") version "8.4"
 }
 
@@ -73,6 +74,7 @@ kotlin {
 
 repositories {
     mavenCentral()
+     // JitPack: GitHub에 호스팅된 라이브러리를 받아오기 위해 필요합니다.
     maven { url = uri("https://jitpack.io") }
 }
 
