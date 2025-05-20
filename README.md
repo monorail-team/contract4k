@@ -242,7 +242,7 @@ ConditionBuilder 에서 자주 쓰이는 주요 헬퍼 함수:
     dueDate isAfter now
     ```
 
-> **전체 헬퍼 목록** 은 `condition.util` 패키지 내 `*ConditionUtils.kt` 파일을 참고하세요.
+> **전체 헬퍼 목록** 은 [헬퍼 함수 문서](./src/main/kotlin/condition/util/README.md)를 참고하세요.
 
 ---
 
